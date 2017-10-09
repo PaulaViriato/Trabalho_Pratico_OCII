@@ -34,7 +34,7 @@ input[3:0]   s2
 
 	always@(posedge clk[25])
 	begin
-	    sinal <= 1'b1;
+		sinal <= 1'b1;
 		case (codop[3:0])
 			4'b0000: assign dado = operando1 + operando2;
 			4'b0001: assign dado = operando1 - operando2;
@@ -49,6 +49,6 @@ input[3:0]   s2
 			4'b1010: assign dado = operando2 - s3;
 			default: dado <= 16'b0;
 		endcase
-	    sinal <= 1'b0;
+		sinal <= 1'b0;
 	end
 endmodule
