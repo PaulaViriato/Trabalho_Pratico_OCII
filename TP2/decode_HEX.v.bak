@@ -4,6 +4,10 @@ input[3:0]        entrada,
 output reg[0:6]   saida
 );
 
+    wire       modo;
+	wire [3:0] entrada;
+	wire [0:6] saida;
+
 	always@(entrada)
 	begin
 	    if (modo == 1'b1)

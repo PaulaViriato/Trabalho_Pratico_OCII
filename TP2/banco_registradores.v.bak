@@ -11,6 +11,17 @@ output reg[15:0]   saida2,
 output reg[15:0]   saida3
 );
 
+	wire          clk;
+	wire          reset;
+	wire          sinal;
+	wire [3:0]    entrada1;
+	wire [3:0]    entrada2;
+	wire [3:0]    entrada3;
+	wire [15:0]   dado;
+	wire [15:0]   saida1;
+	wire [15:0]   saida2;
+	wire [15:0]   saida3;
+
 	reg [15:0] R0;
 	reg [15:0] R1;
 	reg [15:0] R2;
