@@ -1,5 +1,5 @@
 module ula (
-input        CLOCK_50,
+input		 CLOCK_50,
 input[3:0]	 KEY,
 input[17:0]	 SW,
 output[7:0]	 LEDG,
