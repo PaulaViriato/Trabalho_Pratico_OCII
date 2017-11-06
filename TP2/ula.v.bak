@@ -32,14 +32,14 @@ output[0:6]	 HEX7
 	wire [15:0]   operando2;
 	wire [15:0]   operando3;
 
-	wire    	 EscCondCP;
-	wire	    EscCP;
-	wire 	    EscLR;
-	wire[1:0] FonteCP;
-	wire[3:0] ULA_OP;
-	wire	    ULA_A;
-	wire	    ULA_B;
-	wire	    EscReg;	
+	wire    	EscCondCP,
+	wire	    EscCP,
+	wire 	    EscLR,
+	wire[1:0]	FonteCP,
+	wire[3:0]	ULA_OP,
+	wire	    ULA_A,
+	wire	    ULA_B,
+	wire	    EscReg	
 
 	initial
 	begin
@@ -113,7 +113,7 @@ output[0:6]	 HEX7
 			default: dado = 16'b0;
 		endcase
 
-		if ((codop[3:0] > 4'b1010)&&(codop[3:0] < 4'b1101))
+		if (KEY[0] == 1'b0)
 		begin
     		sinal          <= 1'b0;
 			modo           <= 8'b00001111;
@@ -128,7 +128,7 @@ output[0:6]	 HEX7
 		end
 		else
 		begin
-			if (codop[3:0] < 4'b1101)
+			if (KEY[3] == 1'b0)
 			begin
 	     		sinal          <= 1'b1;
 				modo           <= 8'b11111111;
