@@ -1,18 +1,18 @@
 module HEX_control (
-input        clock,
-input[3:0]	 codop,
-input[15:0]  operando1,
-input[15:0]  operando2,
-input[15:0]  operando3,
-input[15:0]  dado,
-output	     sinal,
-output	     modo,
-output[31:0] display
+input            clock,
+input    	     EscReg,
+input[15:0]      operando1,
+input[15:0]      operando2,
+input[15:0]      operando3,
+input[15:0]      dado,
+output reg	     sinal,
+output reg       modo,
+output reg[31:0] display
 );
 	
 	always@(posedge clock)
 	begin
-		if ((codop[3:0] > 4'b1010)&&(codop[3:0] < 4'b1101))
+		if (EscReg == 1'b0)
 		begin
     		sinal          <= 1'b0;
 			modo           <= 8'b00001111;
@@ -27,7 +27,7 @@ output[31:0] display
 		end
 		else
 		begin
-			if (codop[3:0] < 4'b1101)
+			if (EscReg == 1'b1)
 			begin
 	     		sinal          <= 1'b1;
 				modo           <= 8'b11111111;

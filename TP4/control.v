@@ -4,8 +4,8 @@ input           CLK,
 output reg      EscCondCP,
 output reg	    EscCP,
 output reg 	    EscLR,
-output reg[1:0]	FonteCP,
-output reg[3:0]	ULA_OP,
+output reg[1:0] FonteCP,
+output reg[3:0] ULA_OP,
 output reg	    ULA_A,
 output reg[1:0] ULA_B,
 output reg	    EscReg	
@@ -40,8 +40,17 @@ output reg	    EscReg
 					ULA_B     = 2'b10;
 					FonteCP   = 2'b01;
 				end
-				else 
+				
+				else if(CodOP == 4'b1111)
 				begin
+					//Multiplicacao
+					ULA_A = 1'b1;
+					ULA_B = 2'b10;
+					EscCP = 1'b1;
+				end
+				
+				else 
+				begin	
 					EscReg  = 1'b1;
 					ULA_A   = 1'b1;
 					FonteCP = 2'b00;
