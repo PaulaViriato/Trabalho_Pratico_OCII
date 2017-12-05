@@ -1,91 +1,76 @@
 module control(
-input[3:0]	    CodOP,
+input[3:0]	    CODOP,
 input           CLK,
-output reg      EscCondCP,
-output reg	    EscCP,
-output reg 	    EscLR,
-output reg[1:0] FonteCP,
+output reg      ESCCONDCP,
+output reg	    ESCCP,
+output reg 	    ESCIR,
+output reg[1:0] FONTECP,
 output reg[3:0] ULA_OP,
-output reg	    ULA_A,
-output reg[1:0] ULA_B,
-output reg	    EscReg	
+output reg	    ESCREG	
 );
 
 	initial 
 	begin
-		EscLR     = 1'b1;
-		EscCondCP = 1'b0;
-		EscCP     = 1'b0;
-		EscReg    = 1'b0;
+		ESCIR     = 1'b1;
+		ESCCONDCP = 1'b0;
+		ESCCP     = 1'b0;
+		ESCREG    = 1'b0;
 	end
 
 	always@(posedge CLK)
 	begin
-		if(EscLR == 1'b1)
+		if(ESCIR == 1'b1)
 		begin
-			EscLR  = 1'b0;
-			ULA_OP = CodOP;
+			ESCIR  = 1'b0;
+			ULA_OP = CODOP;
 
-			if(CodOP == 4'b1011)
+			if(CODOP[3:0] == 4'b1011)
 			begin
-				EscCP   = 1'b1;
-				FonteCP = 2'b10;
+				ESCCP   = 1'b1;
+				FONTECP = 2'b10;
 			end
+
 			else
 			begin 
-				if(CodOP == 4'b1100)
+				if(CODOP[3:0] == 4'b1100)
 				begin
-					EscCondCP = 1'b1;
-					ULA_A     = 1'b1;
-					ULA_B     = 2'b10;
-					FonteCP   = 2'b01;
+					ESCCONDCP = 1'b1;
+					FONTECP   = 2'b01;
 				end
 				
-				else if(CodOP == 4'b1111)
+				else
 				begin
-					//Multiplicacao
-					ULA_A = 1'b1;
-					ULA_B = 2'b10;
-					EscCP = 1'b1;
-				end
-				
-				else 
-				begin	
-					EscReg  = 1'b1;
-					ULA_A   = 1'b1;
-					FonteCP = 2'b00;
-
-					if(CodOP <= 4'b0101)
+					if(CODOP[3:0] == 4'b1111)
 					begin
-						ULA_B = 2'b10;
+						ESCCP = 1'b1;
 					end
-					else
-					begin
-						ULA_B = 2'b01;
+
+					else 
+					begin	
+						ESCREG  = 1'b1;
+						FONTECP = 2'b00;
 					end
 				end
 			end
 		end
+		
 		else 
 		begin
-			if(EscReg == 1'b1)
+			if(ESCREG == 1'b1)
 			begin
-				EscReg  = 1'b0;
-				EscCP   = 1'b1;
+				ESCREG  = 1'b0;
+				ESCCP   = 1'b1;
 				ULA_OP  = 2'b00;
-				ULA_A   = 1'b0;
-				ULA_B   = 2'b00;
-				FonteCP = 2'b00;
+				FONTECP = 2'b00;
 			end
 		end
 
-		if((EscCP == 1'b1)||(EscCondCP == 1'b1))
+		if((ESCCP == 1'b1)||(ESCCONDCP == 1'b1))
 		begin
-			EscLR     = 1'b1;
-			EscCondCP = 1'b0;
-			EscCP     = 1'b0;
-			EscReg    = 1'b0;
+			ESCIR     = 1'b1;
+			ESCCONDCP = 1'b0;
+			ESCCP     = 1'b0;
+			ESCREG    = 1'b0;
 		end
-
 	end
 endmodule
