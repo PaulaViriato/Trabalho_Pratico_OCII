@@ -13,68 +13,86 @@ output[0:6]	 HEX6,
 output[0:6]	 HEX7
 );
 
-/*---------- DE = Decode ---------- */
-reg [15:0] DE_IR;        // Fetch: Registrador de instrução do MIPS
-reg [9:0]  DE_PC;        // Registrador que carrega o PC (usado no beq para calcular desvio)
-reg [15:0] DE_immediate; // Imediato da instrução
-reg [15:0] DE_S2;        // Registrador A do MIPS
-reg [15:0] DE_S3;        // Registrador B do MIPS
-reg [3:0]  DE_S4;		 //Registrador destino
-reg [7:0]  DE_FSM2;      // Decode: controle das instruções do MIPS
-/*---------- ID = Decode ---------- */
+/*---------------------------------------------------------------------------------------------*/
+/*                  TRABALHO PRATICO 5 - PIPELINE - ORGANIZACAO DE COMPUTADORES II             */
+/*    De posse do processador superescalar criado, com multiplicacao paralela, agora passa-se  */
+/* a aprimorar o funcionamento do mesmo. Como trabalho final deve ser implementado um pipeline */
+/* sobre o caminho de dados desenvolvido.                                                      */
+/*                                                                                             */
+/* -> IMPLEMENTACAO                                                                            */
+/*    O pipeline deve ser desenvolvido com 3 estagios: Decodificacao, Execucao, Memorizacao.   */
+/*    A organizacao e utilizacao dos registradores de pipeline ficam a cargo do grupo.         */
+/*    Se houver necessidade de uma unidade de foward , a mesma DEVE ser implementada, caso     */
+/* haja necessidade e nao for possivel implementa-la, por favor destaquem a necessidade de     */
+/* inserir bolhas durante as simulacoes.                                                       */
+/*                                                                                             */
+/* -> VALIDACAO                                                                                */
+/*    O trabalho deverá ser implementado em FPGA, de modo que seja possível passar como        */
+/* entrada uma instrução ( por meio dos switches da FPGA, tal como feito no TP_II ) e          */
+/* visualizar o conteúdo dos registradores nos LED’s de 7 segmentos, também conforme descrito  */
+/* na especificação do TP_II.                                                                  */
+/*    Além disso, deve ser gerado um script de simulação ( . do ) com uma sequência de         */
+/* instruções usadas pelos próprios membros do grupo para validar o processador (ModelSim).    */
+/*---------------------------------------------------------------------------------------------*/
 
-/*---------- EX = Execute ---------- */
-reg [31:0] EM_saida_ula;	        //registrador de saída da ULA do MIPS
-reg [7:0]  EM_FSM2;			        //Controle das instruções
-reg [4:0]  EM_RD;				    //Registrador Destino
-reg [9:0]  EM_PC;				    // Registrador que carrega o PC
-reg [31:0] EM_dado_a_ser_escrito;	//Dado que sera escrito no BR
-/*---------- EX = Execute ---------- */
 
-/*---------- Memory ---------------- */
-reg [31:0] MW_saida_ula;	//registrador de saida da ula
-reg [7:0] MW_FSM2;			//Controle das instruções
-reg [4:0] MW_RD;				//Registrador Destino
-wire [31:0] MW_dado_a_ser_escrito;
-/*---------- Memory ---------------- */
-
-/*---------- Writeback ---------------- */
-wire br_wen;	//write enable do banco de registradores
-wire reset;		//RESET
-/*---------- Writeback ---------------- */
-
-wire is_jmp_or_beq; //Identifica instrucoes do tipo BEQ/JUMP que serao executadas
-reg block_fetch; //Identifica quando deve matar instrucoes erradas
-wire [31:0] target_PC; //PC de destino em BEQ/JUMP
-wire [31:0] out_mem_inst; //saída da memória de instruções
-wire [31:0] out_mem_data; //saída da memória de dados
-wire signal_wren; 		 //write enable em memoria
-wire [4:0] signal_rd; // utilizado para "criar" o multiplexador que seleciona o registrador de destino do MIPS
-wire [31:0] signal_dado_a_ser_escrito; // utilizado para "criar" o multiplexador que seleciona qual dado será salvo no banco de registradores do MIPS
-
-	reg [31:0]   clk;
+/*---------- REGISTRADORES GLOBAIS ---------------*/
+	reg [31:0]   CLK;
 	reg [31:0]   PC;
-	reg          sinal;
-	reg          reset;
-	reg          ini;
-	reg [15:0]   dado;
-	reg [7:0]    modo;
-	reg [31:0]   display;
+	reg          SIGNAL;
+	wire          RESET;
+	reg [7:0]    MODE;
+	reg [31:0]   DISPLAY;
+	wire          JMP_BEQ;
+	wire [31:0]  DISP_ESCR;
+	wire [31:0]  RES_MULT;
+	wire [15:0]  RES_LOW;
+	wire [15:0]  RES_HIGH;
+	wire [15:0]  OPER1;
+	wire [15:0]  OPER2;
+	wire [15:0]  OPER3;
+	wire [15:0]  out_mem_inst;
+
+/*---------- REGISTRADORES DECODE  - D -----------*/
+	reg [31:0] D_PC;
+	reg [15:0] D_IR;
+	reg [3:0]  D_CODOP;
+	reg [3:0]  D_S2;
+	reg [3:0]  D_S3;
+	reg [3:0]  D_S4;
+	reg [15:0] D_IMM;
+	reg [15:0] D_OPER1;
+	reg [15:0] D_OPER2;
+	reg [15:0] D_OPER3;
+	reg        D_M_START;
+
+/*---------- REGISTRADORES EXECUTE - E -----------*/
+    reg [15:0] E_SAIDA;
+	reg [3:0]  E_CODOP;
+    reg [3:0]  E_RD;
+    reg [31:0] E_PC;
+    reg [15:0] E_DATA;
+	reg        E_M_START;
+
+/*---------- REGISTRADORES MEMORY  - M -----------*/
+    reg  [15:0]  M_SAIDA;
+    reg  [3:0]  M_CODOP;
+    reg  [3:0]  M_RD;
+    wire [15:0] M_DATA;
+
+
+//	assign REG_DEST	       = M_RD;
 	
-	wire [15:0]   out_mem_inst;
-	wire [3:0]    codop;
-	wire [3:0]    s2;
-	wire [3:0]    s3;
-	wire [3:0]    s4;
-	wire [15:0]   imm;
-	wire [15:0]   dado_escrito;
-	wire [31:0]   disp_escrito;
-	wire [15:0]   operando1;
-	wire [15:0]   operando2;
-	wire [15:0]   operando3;
-	wire [31:0]   res_mult;
-	wire [15:0]   res_low;
-	wire [15:0]   res_high;
+//	assign SIGNAL          = (((D_CODOP[3:0] >= 4'b0000)&&(D_CODOP[3:0] < 4'b1010))||(D_CODOP[3:0] == 4'b1101)||(D_CODOP[3:0] == 4'b1110))?(1'b1):(1'b0);
+    //assign SIGNAL = 0;
+	assign RESET           = (KEY[0] == 0)?(1'b1):(1'b0);
+	assign JMP_BEQ         = ((D_CODOP[3:0] == 4'b1011)||(D_CODOP[3:0] == 4'b1100)||(E_PC != 32'b0))?(1'b1):(1'b0);
+	assign TARGET_PC       = ((D_CODOP[3:0] == 4'b1011)||(D_CODOP[3:0] == 4'b1100))?(D_IMM):(E_PC);
+	assign RES_LOW         = RES_MULT[15:0];
+	assign RES_HIGH        = RES_MULT[31:16];
+	assign DISP_ESCR       = DISPLAY;
+	assign M_DATA          = M_SAIDA;
+
 
 	wire      EscCondCP;
 	wire	  EscCP;
@@ -87,212 +105,187 @@ wire [31:0] signal_dado_a_ser_escrito; // utilizado para "criar" o multiplexador
 
 	initial
 	begin
-		clk       = 32'b0;
-		reset     = 1'b1;
-		sinal     = 1'b0;
-		dado      = 16'b0;
-		modo      = 8'b0;
-		display   = 32'b0;
+		CLK       = 32'b0;
+		MODE      = 8'b0;
+		DISPLAY   = 32'b0;
 	end
-
-	assign codop        = SW[15:12];
-	assign s2           = SW[3:0];
-	assign s3           = SW[7:4];
-	assign s4           = SW[11:8];
-	assign imm          = SW[11:0];
-	assign res_low      = res_mult[15:0];
-	assign res_high     = res_mult[31:16];
-
-	assign dado_escrito = dado;
-	assign disp_escrito = display;
 	
-	assign LEDG[0] = clk[25];
-	assign LEDG[1] = clk[25];
-	assign LEDG[2] = clk[25];
-	assign LEDG[3] = clk[25];
-	assign LEDG[4] = clk[25];
-	assign LEDG[5] = clk[25];
-	assign LEDG[6] = clk[25];
-	assign LEDG[7] = clk[25];
+	assign LEDG[0] = CLK[25];
+	assign LEDG[1] = CLK[25];
+	assign LEDG[2] = CLK[25];
+	assign LEDG[3] = CLK[25];
+	assign LEDG[4] = CLK[25];
+	assign LEDG[5] = CLK[25];
+	assign LEDG[6] = CLK[25];
+	assign LEDG[7] = CLK[25];
 
-	decode_HEX H0 (.modo(modo[0]), .entrada(disp_escrito[3:0]),   .saida(HEX0));
-	decode_HEX H1 (.modo(modo[1]), .entrada(disp_escrito[7:4]),   .saida(HEX1));
-	decode_HEX H2 (.modo(modo[2]), .entrada(disp_escrito[11:8]),  .saida(HEX2));
-	decode_HEX H3 (.modo(modo[3]), .entrada(disp_escrito[15:12]), .saida(HEX3));
-	decode_HEX H4 (.modo(modo[4]), .entrada(disp_escrito[19:16]), .saida(HEX4));
-	decode_HEX H5 (.modo(modo[5]), .entrada(disp_escrito[23:20]), .saida(HEX5));
-	decode_HEX H6 (.modo(modo[6]), .entrada(disp_escrito[27:24]), .saida(HEX6));
-	decode_HEX H7 (.modo(modo[7]), .entrada(disp_escrito[31:28]), .saida(HEX7));
+	decode_HEX H0 (.modo(MODE[0]), .entrada(DISP_ESCR[3:0]),   .saida(HEX0));
+	decode_HEX H1 (.modo(MODE[1]), .entrada(DISP_ESCR[7:4]),   .saida(HEX1));
+	decode_HEX H2 (.modo(MODE[2]), .entrada(DISP_ESCR[11:8]),  .saida(HEX2));
+	decode_HEX H3 (.modo(MODE[3]), .entrada(DISP_ESCR[15:12]), .saida(HEX3));
+	decode_HEX H4 (.modo(MODE[4]), .entrada(DISP_ESCR[19:16]), .saida(HEX4));
+	decode_HEX H5 (.modo(MODE[5]), .entrada(DISP_ESCR[23:20]), .saida(HEX5));
+	decode_HEX H6 (.modo(MODE[6]), .entrada(DISP_ESCR[27:24]), .saida(HEX6));
+	decode_HEX H7 (.modo(MODE[7]), .entrada(DISP_ESCR[31:28]), .saida(HEX7));
 
 	always@(posedge CLOCK_50)
 	begin
-		clk = clk + 1;
+		CLK = CLK + 1;
 	end
 
-	mem_inst mem_i (.address(PC), .clock(clk[25]), .q(out_mem_inst));
-	control ctrl (.CodOP(codop), .CLK(clk[25]),     .EscCondCP(EscCondCP), .EscCP(EscCP), 
-	              .EscLR(EscLR), .FonteCP(FonteCP), .ULA_OP(ULA_OP),       .ULA_A(ULA_A), 
-	              .ULA_B(ULA_B), .EscReg(EscReg));
-	mult mult_cpu (.ini(ini), .clk(clk[25]), .A(operando1), .B(operando2), .resultado(res_mult));
-	banco_registradores db (.clk(clk[25]),       .reset(reset),      .sinal(sinal),
-	                        .entrada1(s3),       .entrada2(s2),      .entrada3(s4),
-	                        .dado(dado_escrito), .saida1(operando1), .saida2(operando2),
-	                        .saida3(operando3));
+	mem_inst mem_i (.address(PC), .clock(CLK[25]), .q(out_mem_inst));
 
-	assign MW_dado_a_ser_escrito = ( (MW_FSM2 == `INST_LW) ) ? out_mem_data : MW_saida_ula;	
-	assign signal_rd	=	MW_RD;
-	assign signal_wren = (EM_FSM2 == `INST_SW) ? 1'b1 : 1'b0;
-	assign br_wen = (MW_FSM2 == `INST_ADDI || MW_FSM2 == `INST_ADD ||
-						  MW_FSM2 == `INST_SUB || MW_FSM2 == `INST_LW) ? 1'b1 : 1'b0;
-	assign reset = (KEY[0] == 0) ?  1'b1 : 1'b0 ;
-	assign is_jmp_or_beq = (FD_IR[31:26] == `J_OP_JUMP) || (EM_PC != 9'b0)  ? 1'b1 : 1'b0;
-	assign target_PC =  (FD_IR[31:26] == `J_OP_JUMP) ? {{10{FD_IR[9]}}, FD_IR[9:0]} : EM_PC;
+	control ctrl (.CodOP(D_CODOP), .CLK(CLK[25]),     .EscCondCP(EscCondCP), .EscCP(EscCP), 
+	              .EscLR(EscLR),   .FonteCP(FonteCP), .ULA_OP(ULA_OP),       .ULA_A(ULA_A), 
+	              .ULA_B(ULA_B),   .EscReg(EscReg));
+	
+	mult mult_cpu (.ini(D_M_START), .clk(CLK[25]), .A(OPER1), .B(OPER2), .resultado(RES_MULT));
+	
+	banco_registradores db (.clk(CLK[25]),       .reset(RESET),      .sinal(SIGNAL),
+	                        .entrada1(SW[7:4]),  .entrada2(SW[3:0]), .entrada3(M_RD),
+	                        .dado(M_DATA),       .saida1(OPER1),     .saida2(OPER2),
+	                        .saida3(OPER3));
 
-
-	/*---------- IF = Fetch ---------- */
-	always@(posedge clk[25])begin
-		if(KEY[0] == 0)// Reset
+    /*------- DECODE FASE  - D ---------------*/
+	always@(posedge CLK[25])
+	begin
+		if ((RESET == 1'b1)||(JMP_BEQ == 1'b1))
 		begin
-			PC = 10'b0;
-			DE_IR = 32'b0;
-			block_fetch = 1'b0;
-		end
-		else begin
-			if(is_jmp_or_beq == 1'b0)
+			D_PC      = 32'b0;
+			D_IR      = 16'b0;
+			D_CODOP   = 4'b0;
+			D_S2      = 4'b0;
+			D_S3      = 4'b0;
+			D_S4      = 4'b0;
+			D_IMM     = 16'b0;
+			D_OPER1   = 16'b0;
+			D_OPER2   = 16'b0;
+			D_OPER3   = 16'b0;
+			D_M_START = 1'b0;
+
+			if (RESET == 1'b1)
 			begin
-				if(block_fetch == 1'b0)
-				begin
-					DE_PC <= PC;
-					PC = PC + 1;				
-					DE_IR <= out_mem_inst;					
-				end
-				else begin
-					block_fetch <= 1'b0;
-				end
+				PC = 32'b0;
 			end
-			else begin
-				PC <= target_PC;
-				DE_IR <= 32'b0;
-				block_fetch <= 1'b1;
+			if (RESET == 1'b1)
+			begin
+				PC = TARGET_PC;
 			end
+		end
+
+		else
+		begin
+			D_PC      = PC;
+
+			//Versao com sem RAM
+			D_IR      = SW[15:0];
+			D_CODOP   = SW[15:12];
+			D_S2      = SW[3:0];
+			D_S3      = SW[7:4];
+			D_S4      = SW[11:8];
+			D_IMM     = SW[11:0];
+
+			//Versao com com RAM
+			//D_IR      = OUT_MEM_INST;
+			//D_CODOP   = OUT_MEM_INST[15:12];
+			//D_S2      = OUT_MEM_INST[3:0];
+			//D_S3      = OUT_MEM_INST[7:4];
+			//D_S4      = OUT_MEM_INST[11:8];
+			//D_IMM     = OUT_MEM_INST[11:0];
+
+			D_OPER1   = OPER1;
+			D_OPER2   = OPER2;
+			D_OPER3   = OPER3;
+			D_M_START = ((D_CODOP == 4'b1111)?(1'b1):(1'b0));
 			
+			PC = PC + 1;
 		end
 	end
-	/*---------- IF = Fetch ---------- */
 
-	
-	/*---------- ID = Decode ---------- */
-	always@(posedge clk[25])begin
-		if(KEY[0] == 0 || is_jmp_or_beq == 1'b1 || block_fetch == 1'b1)// Reset/kill op
+    /*------- EXECUTE FASE  - E --------------*/
+	always@(posedge CLK[25])
+	begin
+		if (RESET == 1'b1)
 		begin
-			DE_FSM2 = 8'b0;
-			DE_RD = 5'b0;
-			DE_A = 32'b0;
-			DE_B = 32'b0;
-			DE_immediate = 32'b0;
+			E_SAIDA = 16'b0;
+    		E_RD    = 4'b0;
+    		E_PC    = 32'b0;
+    		E_DATA  = 16'b0;
 		end
-		else
-			if(FD_IR[31:26] == `OPCODE_R) // add or sub
-			begin
-				if(FD_IR[5:0] == `R_OP_ADD) begin
-					DE_FSM2 <= `INST_ADD;		//add			
-				end			
-				if(FD_IR[5:0] == `R_OP_SUB) begin
-					DE_FSM2 <= `INST_SUB;		//sub		
-				end
-					DE_RD <= FD_IR[15:11];		//Registrador destino
-			end
-			if(FD_IR[31:26] == `I_OP_ADDI)//addi
-			begin
-				DE_FSM2 <= `INST_ADDI;//addi
-				DE_RD <= FD_IR[20:16];	//Registrador de destino
-			end
-			if(FD_IR[31:26] == `I_OP_BEQ) // beq
-			begin
-				DE_FSM2 <= `INST_BEQ;//beq
-			end
-			if(FD_IR[31:26] == `J_OP_JUMP) // jump
-			begin
-				DE_FSM2 <= 8'b0;
-				DE_RD <= 5'b0;
-				DE_A <= 32'b0;
-				DE_B <= 32'b0;
-				DE_immediate <= 32'b0;
-			end				
-			if(FD_IR[31:26] == `I_OP_LW) // load
-			begin
-				DE_FSM2 <= `INST_LW;//load
-				DE_RD <= FD_IR[20:16];	//Registrador de destino
-			end
-			if(FD_IR[31:26] == `I_OP_SW) // store
-			begin
-				DE_FSM2 <= `INST_SW;//store
-			end
-			if(FD_IR == 32'b0)
-			begin
-				DE_FSM2 <= 8'b0;
-			end
-			
-			DE_A <= dado_lido_1;
-			DE_B <= dado_lido_2;
-			DE_PC <= FD_PC;
-			DE_immediate <= {{16{FD_IR[15]}}, FD_IR[15:0]};		
-		end	
-	/*---------- ID = Decode ---------- */
-	
-	
-	/*---------- EX = Execute ---------- */
-	always@(posedge clk[25])begin
-		if(KEY[0] == 0)// Reset/kill op
-		begin
-			EM_saida_ula = 32'b0;
-			EM_FSM2 = 32'b0;
-			EM_RD = 5'b0;
-			EM_PC = 10'b0;
-			EM_dado_a_ser_escrito = 32'b0;
-		end
+
 		else
 		begin
-			case (codop[3:0])
-				4'b0000: dado = operando1 + operando2;
-				4'b0001: dado = operando1 - operando2;
-				4'b0010: dado = ((operando2 > s3)?(1'b1):(1'b0));
-				4'b0011: dado = operando2 & operando1;
-				4'b0100: dado = operando2 | operando1;
-				4'b0101: dado = operando2 ^ operando1;
-				4'b0110: dado = operando2 & s3;
-				4'b0111: dado = operando2 | s3;
-				4'b1000: dado = operando2 ^ s3;
-				4'b1001: dado = operando2 + s3;
-				4'b1010: dado = operando2 - s3;
-				4'b1011: PC[11:0] = imm;
-				4'b1100: PC[3:0]  = ((s3 == 0)?(s2):(PC[3:0]+(1'b1)));
-				4'b1101: dado = res_low;
-				4'b1110: dado = res_high;
-				4'b1111: ini  = 1'b1;
-				default: dado = 16'b0;
+			case (D_CODOP[3:0])
+				4'b0000: E_SAIDA = D_OPER1 + D_OPER2;
+				4'b0001: E_SAIDA = D_OPER1 - D_OPER2;
+				4'b0010: E_SAIDA = ((D_OPER2 > D_S3)?(1'b1):(1'b0));
+				4'b0011: E_SAIDA = D_OPER2 & D_OPER1;
+				4'b0100: E_SAIDA = D_OPER2 | D_OPER1;
+				4'b0101: E_SAIDA = D_OPER2 ^ D_OPER1;
+				4'b0110: E_SAIDA = D_OPER2 & D_S3;
+				4'b0111: E_SAIDA = D_OPER2 | D_S3;
+				4'b1000: E_SAIDA = D_OPER2 ^ D_S3;
+				4'b1001: E_SAIDA = D_OPER2 + D_S3;
+				4'b1010: E_SAIDA = D_OPER2 - D_S3;
+				4'b1011: E_PC[11:0] = D_IMM;
+				4'b1100: E_PC[3:0]  = ((D_S3 == 0)?(D_S2):(D_PC[3:0]+(1'b1)));
+				4'b1101: E_SAIDA = RES_LOW;
+				4'b1110: E_SAIDA = RES_HIGH;
+				4'b1111: E_M_START  = 1'b1;
+				default: E_SAIDA = 16'b0;
 			endcase
-			
-			EM_FSM2 <= DE_FSM2;
-			EM_RD <= DE_RD;		
+
+			E_RD = D_S4;
+			E_CODOP = D_CODOP;
 		end
 	end
-	/*---------- EX = Execute ---------- */
 
-	
-	/*---------- MEM = Memory ---------- */
-	always@(posedge clk[25])begin
-		if(KEY[0] == 0)// Reset
+   /*------- MEMORY FASE  - M ---------------*/
+	always@(posedge CLK[25])
+	begin
+		if (RESET == 1'b1)
 		begin
-			MW_saida_ula = 32'b0;
-			MW_FSM2 = 32'b0;
-			MW_RD = 5'b0;
+    		M_RD    = 4'b0;
+    		M_CODOP = 4'b0;
+    		M_SAIDA = 16'b0;
 		end
-	
-		MW_FSM2 <= EM_FSM2;
-		MW_saida_ula <= EM_saida_ula;		
-		MW_RD <= EM_RD;
-	end
-	/*---------- MEM = Memory ---------- */
 
+		else
+		begin
+    		M_SAIDA = E_SAIDA;
+    		M_RD    = E_RD;
+    		M_CODOP = E_CODOP;
+		end
+	end
+
+   /*------- Control HEX  - M ---------------*/
+	always@(posedge CLK[25])
+	begin
+		if (EscReg == 1'b0)
+		begin
+		    SIGNAL         <= 1'b0;
+			MODE           <= 8'b00001111;
+			DISPLAY[3:0]   <= 4'b0;
+			DISPLAY[7:4]   <= 4'b0;
+			DISPLAY[11:8]  <= 4'b0;
+			DISPLAY[15:12] <= 4'b0;
+			DISPLAY[19:16] <= OPER1[3:0];
+			DISPLAY[23:20] <= OPER1[7:4];
+			DISPLAY[27:24] <= OPER3[3:0];
+			DISPLAY[31:28] <= OPER3[7:4];
+		end
+		else
+		begin
+		    SIGNAL         <= 1'b1;
+			MODE           <= 8'b11111111;
+			DISPLAY[3:0]   <= M_SAIDA[3:0];
+			DISPLAY[7:4]   <= M_SAIDA[7:4];
+			DISPLAY[11:8]  <= M_SAIDA[11:8];
+			DISPLAY[15:12] <= M_SAIDA[15:12];
+			DISPLAY[19:16] <= OPER2[3:0];
+			DISPLAY[23:20] <= OPER2[7:4];
+			DISPLAY[27:24] <= OPER1[3:0];
+			DISPLAY[31:28] <= OPER1[7:4];
+		end
+	end
 endmodule
