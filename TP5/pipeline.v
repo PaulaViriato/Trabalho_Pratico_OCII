@@ -62,9 +62,8 @@ output[0:6]	 HEX7
 	reg [15:0] D_OPER2;
 	reg [15:0] D_OPER3;
 	reg        D_M_START;
-
-	reg[1:0] D_FONTECP;      // Se o valor para o PC e PC + 1, saida da ULA ou imediato
-	reg      D_ESCREG;	    // 1 no estagio de salvar no banco de registradores
+	reg[1:0]   D_FONTECP;
+	reg        D_ESCREG;
 
 /*---------- REGISTRADORES EXECUTE - E -----------*/
 	reg        E_JUMPBNQ;
@@ -72,37 +71,33 @@ output[0:6]	 HEX7
     reg [3:0]  E_RD;
     reg [31:0] E_PC;
 	reg        E_M_START;
-
-	reg[1:0] E_FONTECP;      // Se o valor para o PC e PC + 1, saida da ULA ou imediato
-	reg      E_ESCREG;	    // 1 no estagio de salvar no banco de registradores
+	reg[1:0]   E_FONTECP;
+	reg        E_ESCREG;
 
 /*---------- REGISTRADORES MEMORY  - M -----------*/
 	reg         M_JUMPBNQ;
     reg  [15:0] M_SAIDA;
     reg  [3:0]  M_RD;
+	reg         M_ESCREG;
     wire [15:0] M_DATA;
-	reg         M_ESCREG;	    // 1 no estagio de salvar no banco de registradores
     wire        M_WRITE;
 
-	assign RESET           = (KEY[0] == 0)?(1'b1):(1'b0);
-	assign RES_LOW         = RES_MULT[15:0];
-	assign RES_HIGH        = RES_MULT[31:16];
-	assign M_DATA          = M_SAIDA;
-	assign M_WRITE         = M_ESCREG;
+	assign RESET    = (KEY[0] == 0)?(1'b1):(1'b0);
+	assign RES_LOW  = RES_MULT[15:0];
+	assign RES_HIGH = RES_MULT[31:16];
+	assign M_DATA   = M_SAIDA;
+	assign M_WRITE  = M_ESCREG;
 
-	wire      ESCCONDCP;    // 1 quando instrucao condicional (Branch)
-	wire      ESCCP;        // 1 quando escreve no registrador PC
-	wire[1:0] FONTECP;      // Se o valor para o PC e PC + 1, saida da ULA ou imediato
-	wire      ESCREG;	    // 1 no estagio de salvar no banco de registradores
+	wire[1:0] FONTECP;
+	wire      ESCREG;
 
 	initial
 	begin
 		CLK = 32'b0;
 		PC  = 32'b0;
 
-		D_FONTECP   <= 2'b0;
-		D_ESCREG    <= 1'b0;
-
+		D_FONTECP <= 2'b0;
+		D_ESCREG  <= 1'b0;
 		D_PC      <= 32'b0;
 		D_CODOP   <= 4'b0;
 		D_S2      <= 4'b0;
@@ -113,17 +108,20 @@ output[0:6]	 HEX7
 		D_OPER2   <= 16'b0;
 		D_OPER3   <= 16'b0;
 		D_M_START <= 1'b0;
+		D_JUMPBNQ <= 1'b0;
 
-		E_FONTECP   <= 2'b0;
-		E_ESCREG    <= 1'b0;
-		E_SAIDA <= 16'b0;
-   		E_PC    <= 32'b0;
-		E_RD    <= 4'b0;
+		E_FONTECP <= 2'b0;
+		E_ESCREG  <= 1'b0;
+		E_SAIDA   <= 16'b0;
+   		E_PC      <= 32'b0;
+		E_RD      <= 4'b0;
 		E_M_START <= 1'b0;
+		E_JUMPBNQ <= 1'b0;
 
-		M_ESCREG    <= 1'b0;
-   		M_RD    <= 4'b0;
-   		M_SAIDA <= 16'b0;
+		M_ESCREG  <= 1'b0;
+   		M_RD      <= 4'b0;
+   		M_SAIDA   <= 16'b0;
+		M_JUMPBNQ <= 1'b0;
 	end
 	
 	assign LEDG[0] = CLK[25];
@@ -154,24 +152,20 @@ output[0:6]	 HEX7
 
 	mem_inst mem_i (.address(PC), .clock(CLK[25]), .q(out_mem_inst));
 
-	control ctrl (.CODOP(SW[15:12]), .CLK(CLK[25]),     .ESCCONDCP(ESCCONDCP), 
-				  .ESCCP(ESCCP),     .FONTECP(FONTECP), .ESCREG(ESCREG));
-	
-	mult mult_cpu (.ini(D_M_START), .clk(CLK[25]), .A(D_OPER1), .B(D_OPER2), .resultado(RES_MULT));
-	
-	banco_registradores db (.clk(CLK[25]),       .reset(RESET),      .sinal(M_WRITE),
-	                        .entrada1(SW[7:4]),  .entrada2(SW[3:0]), .entrada3(M_RD),
-	                        .dado(M_DATA),       .saida1(OPER1),     .saida2(OPER2),
-	                        .saida3(OPER3));
+	control ctrl_cpu       (.CODOP(SW[15:12]), .CLK(CLK[25]), .FONTECP(FONTECP), .ESCREG(ESCREG));
+	mult mult_cpu          (.ini(D_M_START),   .clk(CLK[25]), .A(D_OPER1),       .B(D_OPER2),        .resultado(RES_MULT));
+	banco_registradores db (.clk(CLK[25]),     .reset(RESET), .sinal(M_WRITE),   .entrada1(SW[7:4]), .entrada2(SW[3:0]), 
+	                        .entrada3(M_RD),   .dado(M_DATA), .saida1(OPER1),    .saida2(OPER2),     .saida3(OPER3));
+
 
     /*------- DECODE FASE  - D ---------------*/
 	always@(posedge CLK[25])
 	begin
 		if (RESET == 1'b1)
 		begin
-			D_FONTECP   <= 2'b0;
-			D_ESCREG    <= 1'b0;
-
+			D_JUMPBNQ <= 1'b0;
+			D_FONTECP <= 2'b0;
+			D_ESCREG  <= 1'b0;
 			D_PC      <= 32'b0;
 			D_CODOP   <= 4'b0;
 			D_S2      <= 4'b0;
@@ -187,37 +181,26 @@ output[0:6]	 HEX7
 		begin
 			if (D_JUMPBNQ == 1'b1)
 			begin
-//				E_JUMPBNQ = 1'b1;
 				D_JUMPBNQ = 1'b0;
 			end
 			else
 			begin
-				D_FONTECP   <= FONTECP;      // Se o valor para o PC e PC + 1, saida da ULA ou imediato
-				D_ESCREG    <= ESCREG;	    // 1 no estagio de salvar no banco de registradores
+			    D_JUMPBNQ <= ((FONTECP == 2'b0)?(1'b0):(1'b1));
+				D_FONTECP <= FONTECP;
+				D_ESCREG  <= ESCREG;
 
-				D_PC      <= PC;
-				D_CODOP   <= SW[15:12];
-				D_S2      <= SW[3:0];
-				D_S3      <= SW[7:4];
-				D_S4      <= SW[11:8];
-				D_IMM     <= SW[11:0];
+				D_PC    <= PC;
+				D_CODOP <= SW[15:12];
+				D_S2    <= SW[3:0];
+				D_S3    <= SW[7:4];
+				D_S4    <= SW[11:8];
+				D_IMM   <= SW[11:0];
 
-				D_OPER1   <= (((SW[7:4] == E_RD)&&(D_ESCREG == 1'b1))?(E_SAIDA):(OPER1));
-				D_OPER2   <= (((SW[3:0] == E_RD)&&(D_ESCREG == 1'b1))?(E_SAIDA):(OPER2));
-				D_OPER3   <= (((SW[11:8] == E_RD)&&(D_ESCREG == 1'b1))?(E_SAIDA):(OPER3));
+				D_OPER1 <= (((SW[7:4] == E_RD)&&(D_ESCREG == 1'b1))?(E_SAIDA):(OPER1));
+				D_OPER2 <= (((SW[3:0] == E_RD)&&(D_ESCREG == 1'b1))?(E_SAIDA):(OPER2));
+				D_OPER3 <= (((SW[11:8] == E_RD)&&(D_ESCREG == 1'b1))?(E_SAIDA):(OPER3));
 
 				D_M_START <= ((D_CODOP == 4'b1111)?(1'b1):(1'b0));
-
-				if (FONTECP == 2'b0)
-				begin
-//					PC = PC + 1;
-					D_JUMPBNQ = 1'b0;
-				end
-				else
-				begin
-					D_JUMPBNQ = 1'b1;
-				end
-
 			end
 		end
 	end
@@ -227,45 +210,45 @@ output[0:6]	 HEX7
 	begin
 		if (RESET == 1'b1)
 		begin
-			E_FONTECP   <= 2'b0;
-			E_ESCREG    <= 1'b0;
-
-			E_SAIDA <= 16'b0;
-    		E_PC    <= 32'b0;
-			E_RD    <= 4'b0;
+			E_JUMPBNQ <= 1'b0;
+			E_FONTECP <= 2'b0;
+			E_ESCREG  <= 1'b0;
+			E_SAIDA   <= 16'b0;
+    		E_PC      <= 32'b0;
+			E_RD      <= 4'b0;
 			E_M_START <= 1'b0;
 		end
 		else
 		begin
 			if (E_JUMPBNQ == 1'b1)
 			begin
-//				M_JUMPBNQ = 1'b1;
 				E_JUMPBNQ = 1'b0;
 			end
 			else
 			begin
-				E_FONTECP   <= D_FONTECP;      // Se o valor para o PC e PC + 1, saida da ULA ou imediato
-				E_ESCREG    <= D_ESCREG;	    // 1 no estagio de salvar no banco de registradores
-				E_RD        <= D_S4;
+			    E_JUMPBNQ <= ((D_FONTECP == 2'b0)?(1'b0):(1'b1));
+				E_FONTECP <= D_FONTECP;
+				E_ESCREG  <= D_ESCREG;
+				E_RD      <= D_S4;
 
 				case (D_CODOP[3:0])
-					4'b0000: E_SAIDA = D_OPER1 + D_OPER2;
-					4'b0001: E_SAIDA = D_OPER1 - D_OPER2;
-					4'b0010: E_SAIDA = ((D_OPER2 > D_S3)?(1'b1):(1'b0));
-					4'b0011: E_SAIDA = D_OPER2 & D_OPER1;
-					4'b0100: E_SAIDA = D_OPER2 | D_OPER1;
-					4'b0101: E_SAIDA = D_OPER2 ^ D_OPER1;
-					4'b0110: E_SAIDA = D_OPER2 & D_S3;
-					4'b0111: E_SAIDA = D_OPER2 | D_S3;
-					4'b1000: E_SAIDA = D_OPER2 ^ D_S3;
-					4'b1001: E_SAIDA = D_OPER2 + D_S3;
-					4'b1010: E_SAIDA = D_OPER2 - D_S3;
+					4'b0000: E_SAIDA    = D_OPER1 + D_OPER2;
+					4'b0001: E_SAIDA    = D_OPER1 - D_OPER2;
+					4'b0010: E_SAIDA    = ((D_OPER2 > D_S3)?(1'b1):(1'b0));
+					4'b0011: E_SAIDA    = D_OPER2 & D_OPER1;
+					4'b0100: E_SAIDA    = D_OPER2 | D_OPER1;
+					4'b0101: E_SAIDA    = D_OPER2 ^ D_OPER1;
+					4'b0110: E_SAIDA    = D_OPER2 & D_S3;
+					4'b0111: E_SAIDA    = D_OPER2 | D_S3;
+					4'b1000: E_SAIDA    = D_OPER2 ^ D_S3;
+					4'b1001: E_SAIDA    = D_OPER2 + D_S3;
+					4'b1010: E_SAIDA    = D_OPER2 - D_S3;
 					4'b1011: E_PC[11:0] = D_IMM;
 					4'b1100: E_PC[3:0]  = ((D_S3 == 0)?(D_S2):(D_PC[3:0]+(1'b1)));
-					4'b1101: E_SAIDA = RES_LOW;
-					4'b1110: E_SAIDA = RES_HIGH;
+					4'b1101: E_SAIDA    = RES_LOW;
+					4'b1110: E_SAIDA    = RES_HIGH;
 					4'b1111: E_M_START  = 1'b1;
-					default: E_SAIDA = 16'b0;
+					default: E_SAIDA    = 16'b0;
 				endcase
 			end
 		end
@@ -276,9 +259,10 @@ output[0:6]	 HEX7
 	begin
 		if (RESET == 1'b1)
 		begin
-			M_ESCREG    <= 1'b0;
-    		M_RD    <= 4'b0;
-    		M_SAIDA <= 16'b0;
+			M_JUMPBNQ <= 1'b0;
+			M_ESCREG  <= 1'b0;
+    		M_RD      <= 4'b0;
+    		M_SAIDA   <= 16'b0;
 		end
 		else
 		begin
@@ -288,11 +272,11 @@ output[0:6]	 HEX7
 			end
 			else
 			begin
-//	    		PC       <= ((E_FONTECP != 2'b0)?(E_PC):(PC));
-				M_ESCREG <= E_ESCREG;	    // 1 no estagio de salvar no banco de registradores
-	    		M_SAIDA  <= E_SAIDA;
-	    		M_RD     <= E_RD;
-
+	    		PC        <= ((E_FONTECP != 2'b0)?(E_PC):(PC + 1));
+			    M_JUMPBNQ <= ((E_FONTECP == 2'b0)?(1'b0):(1'b1));
+				M_ESCREG  <= E_ESCREG;
+	    		M_SAIDA   <= E_SAIDA;
+	    		M_RD      <= E_RD;
 			end
 		end
 	end
